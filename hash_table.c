@@ -1,227 +1,125 @@
 #include <stdio.h>
 #include <stdlib.h>
-
 #define SIZE 10
-
 typedef struct Node {
-    int key;
-    int value;
+    int key, value;
     struct Node *next;
 } Node;
-
 typedef struct {
-    int key;
-    int value;
-    int status;  
+    int key, value, status;
 } Entry;
-
-Node *chain[SIZE];
+Node *chain[SIZE] = {NULL};
 Entry table[SIZE];
-
 int hash(int key) {
     return (key % SIZE + SIZE) % SIZE;
 }
-
-void initStructures(void) {
-    for (int i = 0; i < SIZE; i++) {
-        chain[i] = NULL;
-        table[i].status = 0;
-    }
-}
-
+// Separate Chaining
 void insertChain(int k, int v) {
     int i = hash(k);
-    Node *current = chain[i];
-
-    while (current != NULL) {
-        if (current->key == k) {
-            current->value = v;
-            printf("Updated existing key %d in chaining table\n", k);
-            return;
-        }
-        current = current->next;
-    }
-
-    Node *n = (Node *)malloc(sizeof(Node));
-    if (n == NULL) {
-        printf("Memory allocation failed\n");
-        return;
-    }
-
+    Node *n = malloc(sizeof(Node));
+    if (!n) return;
     n->key = k;
     n->value = v;
     n->next = chain[i];
     chain[i] = n;
-    printf("Inserted key %d using chaining at index %d\n", k, i);
+    printf("Inserted using Chaining\n");
 }
-
+// Linear Probing
 void insertOpen(int k, int v) {
     int i = hash(k);
-
     for (int j = 0; j < SIZE; j++) {
         int p = (i + j) % SIZE;
-
-        if (table[p].status == 0 || table[p].status == 2) {
-            table[p].key = k;
-            table[p].value = v;
-            table[p].status = 1;
-            printf("Inserted key %d using open addressing at index %d\n", k, p);
-            return;
-        }
-
-        if (table[p].status == 1 && table[p].key == k) {
-            table[p].value = v;
-            printf("Updated existing key %d in open addressing table\n", k);
+        if (table[p].status != 1) {
+            table[p] = (Entry){k, v, 1};
+            printf("Inserted at index %d\n", p);
             return;
         }
     }
-
     printf("Table Full\n");
 }
-
+// Search
 int search(int k) {
     int i = hash(k);
-
     for (int j = 0; j < SIZE; j++) {
         int p = (i + j) % SIZE;
-
-        if (table[p].status == 0) {
-            break;
-        }
-
+        if (table[p].status == 0) break;
         if (table[p].status == 1 && table[p].key == k) {
-            printf("Found in open addressing! Value = %d\n", table[p].value);
+            printf("Found! Value = %d\n", table[p].value);
             return 1;
         }
     }
-
-
-    Node *n = chain[i];
-    while (n != NULL) {
+    for (Node *n = chain[i]; n; n = n->next) {
         if (n->key == k) {
-            printf("Found in chaining! Value = %d\n", n->value);
+            printf("Found! Value = %d\n", n->value);
             return 1;
         }
-        n = n->next;
     }
-
-    printf("Key not found\n");
+    printf("Key Not Found\n");
     return 0;
 }
-
+// Delete
 void deleteKey(int k) {
     int i = hash(k);
-
     for (int j = 0; j < SIZE; j++) {
         int p = (i + j) % SIZE;
-
-        if (table[p].status == 0) {
-            break;
-        }
-
+        if (table[p].status == 0) break;
         if (table[p].status == 1 && table[p].key == k) {
             table[p].status = 2;
-            printf("Key %d deleted from open addressing table\n", k);
+            printf("Key Deleted\n");
             return;
         }
     }
-
-    Node *current = chain[i];
-    Node *prev = NULL;
-
-    while (current != NULL) {
-        if (current->key == k) {
-            if (prev == NULL) {
-                chain[i] = current->next;
-            } else {
-                prev->next = current->next;
-            }
-            free(current);
-            printf("Key %d deleted from chaining table\n", k);
+    Node *n = chain[i], *prev = NULL;
+    while (n) {
+        if (n->key == k) {
+            if (prev) prev->next = n->next;
+            else chain[i] = n->next;
+            free(n);
+            printf("Key Deleted\n");
             return;
         }
-        prev = current;
-        current = current->next;
+        prev = n;
+        n = n->next;
     }
-
-    printf("Key not found\n");
+    printf("Key Not Found\n");
 }
-
-void displayStructures(void) {
-    printf("\nOpen Addressing Table:\n");
-    for (int i = 0; i < SIZE; i++) {
-        if (table[i].status == 1) {
-            printf("Index %d -> (%d, %d)\n", i, table[i].key, table[i].value);
-        } else {
-            printf("Index %d -> Empty\n", i);
-        }
-    }
-
-    printf("\nSeparate Chaining Table:\n");
-    for (int i = 0; i < SIZE; i++) {
-        printf("Bucket %d: ", i);
-        Node *current = chain[i];
-        if (current == NULL) {
-            printf("Empty\n");
-            continue;
-        }
-        while (current != NULL) {
-            printf("(%d, %d) -> ", current->key, current->value);
-            current = current->next;
-        }
-        printf("NULL\n");
-    }
-}
-
 int main() {
     int choice, k, v, method;
-    initStructures();
-
     while (1) {
-        printf("\nMenu:\n");
-        printf("1. Insert\n2. Search\n3. Delete\n4. Display\n5. Exit\n");
-        printf("Enter choice: ");
+        printf("\n1.Insert  2.Search  3.Delete  4.Exit");
+        printf("\nEnter choice: ");
         scanf("%d", &choice);
-
         switch (choice) {
             case 1:
                 printf("Enter key and value: ");
-                scanf("%d %d", &k, &v);
-                printf("Choose hashing method:\n1. Separate Chaining\n2. Open Addressing\nEnter method: ");
-                scanf("%d", &method);
-                if (method == 1) {
-                    insertChain(k, v);
-                } else if (method == 2) {
-                    insertOpen(k, v);
+                scanf("%d%d", &k, &v);
+                int i = hash(k);
+                if (table[i].status == 0 && chain[i] == NULL) {
+                    table[i] = (Entry){k, v, 1};
+                    printf("Inserted at index %d\n", i);
                 } else {
-                    printf("Invalid method\n");
+                    printf("Collision! 1.Seperate Chaining  2.Open Addressing: ");
+                    scanf("%d", &method);
+
+                    if (method == 1) insertChain(k, v);
+                    else if (method == 2) insertOpen(k, v);
+                    else printf("Invalid Method\n");
                 }
                 break;
-
             case 2:
                 printf("Enter key: ");
                 scanf("%d", &k);
                 search(k);
                 break;
-
             case 3:
                 printf("Enter key: ");
                 scanf("%d", &k);
                 deleteKey(k);
                 break;
-
             case 4:
-                displayStructures();
-                break;
-
-            case 5:
-                printf("Exiting program...\n");
                 return 0;
-
             default:
-                printf("Invalid choice\n");
+                printf("Invalid Choice\n");
         }
     }
-
-    return 0;
 }
